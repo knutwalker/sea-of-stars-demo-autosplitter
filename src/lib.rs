@@ -1,4 +1,4 @@
-#![cfg_attr(not(debug_assertions), no_std)]
+#![no_std]
 
 use asr::{
     future::next_tick,
@@ -10,31 +10,26 @@ use asr::{
 };
 
 asr::async_main!(stable);
+asr::panic_handler!();
 
+#[cfg(debug_assertions)]
 macro_rules! log {
     ($($arg:tt)*) => {{
-        #[cfg(debug_assertions)]
-        {
-            ::asr::print_message(&::std::format!($($arg)*));
-        }
+            let mut buf = ::arrayvec::ArrayString::<1024>::new();
+            let _ = ::core::fmt::Write::write_fmt(
+                &mut buf,
+                ::core::format_args!($($arg)*),
+            );
+            ::asr::print_message(&buf);
     }};
 }
 
 #[cfg(not(debug_assertions))]
-asr::panic_handler!(print: never);
+macro_rules! log {
+    ($($arg:tt)*) => {};
+}
 
 async fn main() {
-    #[cfg(debug_assertions)]
-    {
-        std::panic::set_hook(Box::new(|info| {
-            asr::print_limited::<1024>(info);
-            #[cfg(target_arch = "wasm32")]
-            core::arch::wasm32::unreachable();
-            #[cfg(target_arch = "wasm64")]
-            core::arch::wasm64::unreachable();
-        }));
-    }
-
     let settings = Settings::register();
     log!("Loaded settings: {settings:?}");
 

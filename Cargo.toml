@@ -21,6 +21,7 @@ asr = { git = "https://github.com/LiveSplit/asr", rev = "38760c71ae329c299a723ab
     # "ps1", # Accessing PlayStation emulators.
 ] }
 
+arrayvec = { version = "0.7", default_features = false }
 # Bytemuck can be used to define structs that are being read from the game's process.
 # bytemuck = { version = "1", features = ["derive", "min_const_generics"] }
 

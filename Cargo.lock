@@ -91,6 +91,7 @@ dependencies = [
 name = "sea-of-stars-demo-autosplitter"
 version = "0.1.0"
 dependencies = [
+ "arrayvec",
  "asr",
 ]
 
