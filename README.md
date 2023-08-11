@@ -2,6 +2,13 @@
 
 An auto splitter for the demo of Sea Of Stars.
 
+## Download
+
+The latest version of the auto splitter can be downloaded from:
+
+    https://github.com/knutwalker/sea-of-stars-demo-autosplitter/releases/download/latest/sea_of_stars_demo_autosplitter.wasm
+
+
 ## Compilation
 
 This auto splitter is written in Rust. In order to compile it, you need to
