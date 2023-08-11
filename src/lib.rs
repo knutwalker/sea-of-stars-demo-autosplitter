@@ -31,6 +31,7 @@ macro_rules! log {
 }
 
 async fn main() {
+    asr::set_tick_rate(60.0);
     let settings = Settings::register();
     log!("Loaded settings: {settings:?}");
 
