@@ -4,11 +4,10 @@ use asr::{
     future::next_tick,
     game_engine::unity::il2cpp::{Class, Module, Version},
     timer::{self, TimerState},
-    user_settings::{Settings, Title},
+    user_settings::Settings,
     watcher::Watcher,
     Address, Address64, Process,
 };
-use core::fmt::{self, Debug};
 
 asr::async_main!(stable);
 asr::panic_handler!();
@@ -72,10 +71,8 @@ async fn main() {
     }
 }
 
-#[derive(Settings)]
+#[derive(Debug, Settings)]
 struct Settings {
-    /// Additional Splits
-    _splits: Title,
     /// Split when descending the mountain
     mountain: bool,
     /// Split when leaving town
@@ -86,22 +83,8 @@ struct Settings {
     level_up: bool,
     /// Split when starting the boss fight
     dungeon: bool,
-    /// Miscellaneous
-    _misc: Title,
     /// Stop game timer during loads
     stop_when_loading: bool,
-}
-
-impl Debug for Settings {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Settings")
-            .field("mountain", &self.mountain)
-            .field("town", &self.town)
-            .field("mob", &self.mob)
-            .field("level_up", &self.level_up)
-            .field("dungeon", &self.dungeon)
-            .finish()
-    }
 }
 
 impl Settings {
