@@ -36,6 +36,8 @@ jobs:
           name: Latest
           tag_name: latest
           body: This contains the latest version of the auto splitter.
+          generate_release_notes: true
+          append_body: true
 
   clippy:
     name: Check clippy lints
