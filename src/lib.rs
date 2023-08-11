@@ -200,9 +200,9 @@ enum Progress {
 
 impl Progress {
     fn new() -> Self {
-        Self::NotRunning {
-            play_time: Watcher::new(),
-        }
+        let mut play_time = Watcher::new();
+        play_time.update_infallible(u64::MAX);
+        Self::NotRunning { play_time }
     }
 
     fn act(&mut self, data: &Data<'_>) -> Option<Action> {
