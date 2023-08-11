@@ -8,6 +8,7 @@ use asr::{
     watcher::Watcher,
     Address, Address64, Process,
 };
+use core::fmt::{self, Debug};
 
 asr::async_main!(stable);
 asr::panic_handler!();
@@ -15,12 +16,12 @@ asr::panic_handler!();
 #[cfg(debug_assertions)]
 macro_rules! log {
     ($($arg:tt)*) => {{
-            let mut buf = ::arrayvec::ArrayString::<1024>::new();
-            let _ = ::core::fmt::Write::write_fmt(
-                &mut buf,
-                ::core::format_args!($($arg)*),
-            );
-            ::asr::print_message(&buf);
+        let mut buf = ::arrayvec::ArrayString::<1024>::new();
+        let _ = ::core::fmt::Write::write_fmt(
+            &mut buf,
+            ::core::format_args!($($arg)*),
+        );
+        ::asr::print_message(&buf);
     }};
 }
 
@@ -48,31 +49,34 @@ async fn main() {
                     }
 
                     let action = progress.act(&data);
-                    match action {
-                        Some(Action::ResetAndStart) => {
-                            log!("Starting new run");
-                            if timer::state() == TimerState::Ended {
-                                timer::reset();
+                    if let Some(action) = action {
+                        log!("Decided on an action: {action:?}");
+                        match action {
+                            Action::ResetAndStart => {
+                                log!("Starting new run");
+                                if timer::state() == TimerState::Ended {
+                                    timer::reset();
+                                }
+                                timer::start();
                             }
-                            timer::start();
+                            Action::Split(split) => settings.split(split),
+                            Action::Pause(split) => {
+                                if settings.stop_when_loading {
+                                    log!("Pausing game time");
+                                    timer::pause_game_time();
+                                }
+
+                                if let Some(split) = split {
+                                    settings.split(split);
+                                }
+                            }
+                            Action::Resume => {
+                                if settings.stop_when_loading {
+                                    log!("Resuming game time");
+                                    timer::resume_game_time();
+                                }
+                            }
                         }
-                        Some(Action::Pause(split)) => {
-                            if settings.stop_when_loading {
-                                log!("Pausing game time");
-                                timer::pause_game_time();
-                            }
-                            if let Some(split) = split {
-                                settings.split(split);
-                            }
-                        }
-                        Some(Action::Resume) => {
-                            if settings.stop_when_loading {
-                                log!("Resuming game time");
-                                timer::resume_game_time();
-                            }
-                        }
-                        Some(Action::Split(split)) => settings.split(split),
-                        None => {}
                     }
 
                     next_tick().await;
@@ -102,8 +106,8 @@ struct Settings {
     stop_when_loading: bool,
 }
 
-impl core::fmt::Debug for Settings {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl Debug for Settings {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Settings")
             .field("mountain", &self.mountain)
             .field("town", &self.town)
@@ -155,6 +159,7 @@ impl Settings {
     }
 }
 
+#[derive(Debug)]
 enum Split {
     Mountain,
     Town,
@@ -164,6 +169,7 @@ enum Split {
     Boss,
 }
 
+#[derive(Debug)]
 enum Action {
     ResetAndStart,
     Split(Split),
