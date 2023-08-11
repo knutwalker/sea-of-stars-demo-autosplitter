@@ -44,13 +44,12 @@ async fn main() {
 
                 loop {
                     if matches!(timer::state(), TimerState::NotRunning | TimerState::Ended)
-                        && !matches!(progress, Progress::NotRunning { .. })
+                        && !matches!(progress.splits, SplitProgression::NotRunning { .. })
                     {
                         progress = Progress::new();
                     }
 
-                    let action = progress.act(&data);
-                    if let Some(action) = action {
+                    while let Some(action) = progress.act(&data) {
                         log!("Decided on an action: {action:?}");
                         match action {
                             Action::ResetAndStart => {
@@ -61,22 +60,8 @@ async fn main() {
                                 timer::start();
                             }
                             Action::Split(split) => settings.split(split),
-                            Action::Pause(split) => {
-                                if settings.stop_when_loading {
-                                    log!("Pausing game time");
-                                    timer::pause_game_time();
-                                }
-
-                                if let Some(split) = split {
-                                    settings.split(split);
-                                }
-                            }
-                            Action::Resume => {
-                                if settings.stop_when_loading {
-                                    log!("Resuming game time");
-                                    timer::resume_game_time();
-                                }
-                            }
+                            Action::Pause => settings.pause(),
+                            Action::Resume => settings.resume(),
                         }
                     }
 
@@ -120,6 +105,20 @@ impl Debug for Settings {
 }
 
 impl Settings {
+    fn pause(&self) {
+        if self.stop_when_loading {
+            log!("Pause game time");
+            timer::pause_game_time();
+        }
+    }
+
+    fn resume(&self) {
+        if self.stop_when_loading {
+            log!("Resume game time");
+            timer::resume_game_time();
+        }
+    }
+
     fn split(&self, split: Split) {
         match split {
             Split::Mountain => {
@@ -174,71 +173,78 @@ enum Split {
 enum Action {
     ResetAndStart,
     Split(Split),
-    Pause(Option<Split>),
+    Pause,
     Resume,
 }
 
-enum Progress {
-    NotRunning {
-        play_time: Watcher<u64>,
-    },
-    Started {
-        loading: Watcher<bool>,
-        level_loads: usize,
-    },
-    InDungeon,
-    AgainstMob,
-    DungeonAgain {
-        party_level: Watcher<u32>,
-    },
-    Leveled,
-    EncounteredFinalBoss {
-        enemy: Address64,
-        hp: Watcher<u32>,
-    },
+struct Progress {
+    loading: Watcher<bool>,
+    splits: SplitProgression,
+    next: Option<Action>,
 }
 
 impl Progress {
+    fn new() -> Self {
+        Self {
+            loading: Watcher::new(),
+            splits: SplitProgression::new(),
+            next: None,
+        }
+    }
+
+    fn act(&mut self, data: &Data<'_>) -> Option<Action> {
+        if let Some(next) = self.next.take() {
+            return Some(next);
+        }
+
+        match self.loading.update(data.is_loading()) {
+            Some(l) if l.changed_to(&false) => Some(Action::Resume),
+            Some(l) if l.changed_to(&true) => {
+                self.next = self.splits.act(true, data);
+                Some(Action::Pause)
+            }
+            _ => self.splits.act(false, &data),
+        }
+    }
+}
+
+enum SplitProgression {
+    NotRunning { play_time: Watcher<u64> },
+    Started { level_loads: usize },
+    InDungeon,
+    AgainstMob,
+    DungeonAgain { party_level: Watcher<u32> },
+    Leveled,
+    EncounteredFinalBoss { enemy: Address64, hp: Watcher<u32> },
+}
+
+impl SplitProgression {
     fn new() -> Self {
         let mut play_time = Watcher::new();
         play_time.update_infallible(u64::MAX);
         Self::NotRunning { play_time }
     }
 
-    fn act(&mut self, data: &Data<'_>) -> Option<Action> {
+    fn act(&mut self, loading: bool, data: &Data<'_>) -> Option<Action> {
         match self {
             Self::NotRunning { play_time } => {
                 let play_time = play_time.update(data.play_time());
                 if play_time.is_some_and(|pt| pt.changed_to(&0)) {
-                    *self = Self::Started {
-                        loading: Watcher::new(),
-                        level_loads: 0,
-                    };
+                    *self = Self::Started { level_loads: 0 };
                     return Some(Action::ResetAndStart);
                 }
             }
-            Self::Started {
-                loading,
-                level_loads,
-            } => {
-                let loads = loading.update(data.is_loading());
-                match loads {
-                    Some(l) if l.changed_to(&true) => {
-                        *level_loads += 1;
-                        let split = match *level_loads {
-                            2 => Some(Split::Mountain),
-                            3 => Some(Split::Town),
-                            _ => None,
-                        };
-                        return Some(Action::Pause(split));
-                    }
-                    Some(l) if l.changed_to(&false) => {
-                        if *level_loads == 4 {
+            Self::Started { level_loads } => {
+                if loading {
+                    *level_loads += 1;
+                    match *level_loads {
+                        2 => return Some(Action::Split(Split::Mountain)),
+                        3 => return Some(Action::Split(Split::Town)),
+                        4 => {
                             *self = Self::InDungeon;
                         }
-                        return Some(Action::Resume);
+                        _ => {}
                     }
-                    _ => {}
                 }
             }
             Self::InDungeon => {
