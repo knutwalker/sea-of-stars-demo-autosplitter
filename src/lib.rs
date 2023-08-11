@@ -4,7 +4,7 @@ use asr::{
     future::next_tick,
     game_engine::unity::il2cpp::{Image, Module, Version},
     timer::{self, TimerState},
-    user_settings,
+    user_settings::{Settings, Title},
     watcher::Watcher,
     Address, Address64, Process,
 };
@@ -82,42 +82,39 @@ async fn main() {
     }
 }
 
-#[derive(Debug)]
+#[derive(Settings)]
 struct Settings {
+    /// Additional Splits
+    _splits: Title,
+    /// Split when descending the mountain
     mountain: bool,
+    /// Split when leaving town
     town: bool,
+    /// Split when defeating the special mob in the blue room
     mob: bool,
+    /// Split when leveled up
     level_up: bool,
+    /// Split when starting the boss fight
     dungeon: bool,
+    /// Miscellaneous
+    _misc: Title,
+    /// Stop game timer during loads
     stop_when_loading: bool,
 }
 
-impl Settings {
-    fn register() -> Self {
-        Self {
-            mountain: {
-                user_settings::add_title("__sosd_splits", "Additional Splits", 0);
-                user_settings::add_bool("mountain", "Split when descending the mountain", false)
-            },
-            town: user_settings::add_bool("town", "Split when leaving town", false),
-            mob: user_settings::add_bool(
-                "mob",
-                "Split when defeating the special mob in the blue room",
-                false,
-            ),
-            level_up: user_settings::add_bool("level_up", "Split when leveled up", false),
-            dungeon: user_settings::add_bool(
-                "dungeon",
-                "Split when starting the boss fight",
-                false,
-            ),
-            stop_when_loading: {
-                user_settings::add_title("__sosd_misc", "Miscellaneous", 0);
-                user_settings::add_bool("stop_when_loading", "Stop game timer during loads", false)
-            },
-        }
+impl core::fmt::Debug for Settings {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Settings")
+            .field("mountain", &self.mountain)
+            .field("town", &self.town)
+            .field("mob", &self.mob)
+            .field("level_up", &self.level_up)
+            .field("dungeon", &self.dungeon)
+            .finish()
     }
+}
 
+impl Settings {
     fn split(&self, split: Split) {
         match split {
             Split::Mountain => {

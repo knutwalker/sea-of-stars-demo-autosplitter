@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 asr = { git = "https://github.com/LiveSplit/asr", rev = "38760c71ae329c299a723ab06b1467be0a47c9e1", features = [
     # "alloc", # Working with allocations.
-    # "derive", # Defining your own settings structs, converting endianness, and binding to .NET classes.
+    "derive", # Defining your own settings structs, converting endianness, and binding to .NET classes.
     # "flags", # Working with bit flags.
     # "float-vars", # Setting floating point variables.
     # "float-vars-small", # Setting floating point variables (small binary size).
