@@ -1,5 +1,7 @@
 # Sea of Stars Demo Auto-splitter
 
+Archived! Use the regular autosplitter: [knutwalker/sea-of-stars-autosplitter](https://github.com/knutwalker/sea-of-stars-autosplitter)
+
 An auto splitter for the demo of Sea Of Stars.
 
 ## Download
